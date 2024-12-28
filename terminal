@@ -1,1 +1,14 @@
- 
+# First, initialize git in your local project
+git init
+
+# Add all your files
+git add .
+
+# Commit the files
+git commit -m "Initial commit: Quiz app with buzzer functionality"
+
+# Add the remote repository
+git remote add origin https://github.com/ramnan10118/quizhtml.git
+
+# Push to main branch
+git push -u origin main 

@@ -124,12 +124,15 @@
                 statusMessage.className = 'status-message success';
                 statusMessage.style.display = 'block';
                 buzzerBtn.classList.add('disabled');
+                canBuzz = false;
                 waitingMsg.style.display = 'none';
             } else {
-                // Someone else buzzed - but don't disable your buzzer!
+                // Someone else buzzed - now we should disable your buzzer too
                 statusMessage.textContent = `Team ${data.teamName} buzzed in position #${data.rank || '?'}!`;
                 statusMessage.className = 'status-message info';
                 statusMessage.style.display = 'block';
+                buzzerBtn.classList.add('disabled');
+                canBuzz = false;
             }
         });
 
