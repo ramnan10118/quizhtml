@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Quiz Host</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .status { 
+            color: #666;
+            margin: 10px 0;
+        }
+        .controls {
+            margin: 20px 0;
+            padding: 20px;
+            background: #f5f5f5;
+            border-radius: 8px;
+        }
+        .team-name {
+            font-weight: bold;
+            color: #1565c0;
+            margin-bottom: 5px;
+        }
+        .timestamp {
+            color: #666;
+            font-size: 0.8em;
+            margin-top: 5px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .reset-btn {
+            background: #4CAF50;
+            color: white;
+        }
+        .clear-btn {
+            background: #f44336;
+            color: white;
+        }
+        .first-answer {
+            border-left: 5px solid #4CAF50;
+        }
+        #buzzStatus {
+            font-size: 1.2em;
+            margin: 10px 0;
+            padding: 10px;
+            background: #e8f5e9;
+            border-radius: 5px;
+            display: none;
+        }
+        .teams-list {
+            margin: 20px 0;
+            padding: 15px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .team-item {
+            padding: 5px 0;
+            color: #666;
+        }
+        .buzz-rankings {
+            margin: 20px 0;
+            padding: 15px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .rank-item {
+            padding: 10px;
+            margin: 5px 0;
+            background: #f5f5f5;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+        }
+        .rank-number {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-right: 15px;
+            color: #1565c0;
+        }
+        .rankings-section {
+            margin: 20px 0;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .rank-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            margin: 10px 0;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #1565c0;
+        }
+        .rank-position {
+            font-size: 24px;
+            font-weight: bold;
+            color: #1565c0;
+            margin-right: 20px;
+            min-width: 40px;
+        }
+        .rank-team {
+            font-size: 18px;
+            flex-grow: 1;
+        }
+        .rank-time {
+            color: #666;
+            font-size: 14px;
+        }
+        .no-rankings {
+            color: #666;
+            font-style: italic;
+            padding: 20px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <h1>Quiz Host</h1>
+    <div class="status" id="connectionStatus">Connecting...</div>
+    
+    <div class="teams-list">
+        <h3>Connected Teams:</h3>
+        <div id="teamsList"></div>
+    </div>
+
+    <div class="rankings-section">
+        <h2>Current Round Rankings</h2>
+        <div id="buzzRankings"></div>
+    </div>
+
+    <div class="controls">
+        <div id="buzzStatus"></div>
+        <button class="reset-btn" onclick="resetBuzzer()">Reset Buzzer</button>
+    </div>
+
+    <script>
+        const socket = io('http://localhost:3001');
+        const statusDiv = document.getElementById('connectionStatus');
+        const buzzStatusDiv = document.getElementById('buzzStatus');
+        const teamsListDiv = document.getElementById('teamsList');
+        const buzzRankingsDiv = document.getElementById('buzzRankings');
+        let currentRankings = [];
+        
+        const teams = new Map(); // Store connected teams
+
+        socket.on('connect', () => {
+            statusDiv.textContent = '✅ Connected as Host';
+        });
+
+        socket.on('disconnect', () => {
+            statusDiv.textContent = '❌ Disconnected';
+        });
+
+        socket.on('register-team', (data) => {
+            teams.set(data.socketId, data.teamName);
+            updateTeamsList();
+        });
+
+        socket.on('buzz', (data) => {
+            // Add new buzz to rankings
+            currentRankings.push({
+                teamName: data.teamName,
+                timestamp: data.timestamp
+            });
+            
+            // Sort by timestamp and keep only top 4
+            currentRankings.sort((a, b) => a.timestamp - b.timestamp);
+            currentRankings = currentRankings.slice(0, 4);
+            
+            // Update display
+            updateRankings();
+        });
+
+        socket.on('disconnect-team', (socketId) => {
+            teams.delete(socketId);
+            updateTeamsList();
+        });
+
+        function updateTeamsList() {
+            teamsListDiv.innerHTML = Array.from(teams.values())
+                .map(team => `<div class="team-item">• ${team}</div>`)
+                .join('');
+        }
+
+        function updateRankings() {
+            if (currentRankings.length === 0) {
+                buzzRankingsDiv.innerHTML = `
+                    <div class="no-rankings">
+                        No teams have buzzed yet
+                    </div>
+                `;
+                return;
+            }
+
+            buzzRankingsDiv.innerHTML = currentRankings
+                .map((rank, index) => {
+                    const time = new Date(rank.timestamp).toLocaleTimeString();
+                    return `
+                        <div class="rank-item">
+                            <div class="rank-position">#${index + 1}</div>
+                            <div class="rank-team">Team ${rank.teamName}</div>
+                            <div class="rank-time">${time}</div>
+                        </div>
+                    `;
+                }).join('');
+        }
+
+        function resetBuzzer() {
+            socket.emit('reset-buzzer');
+            buzzStatusDiv.style.display = 'none';
+            currentRankings = []; // Clear rankings
+            updateRankings();
+        }
+    </script>
+</body>
+</html> 

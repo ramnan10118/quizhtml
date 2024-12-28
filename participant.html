@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Quiz Participant</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            padding: 20px;
+            text-align: center;
+            background: #f0f0f0;
+        }
+        .status { 
+            color: #666;
+            margin: 10px 0;
+        }
+        .team-section {
+            margin: 20px 0;
+        }
+        .buzzer {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            background: #ff4444;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            margin: 20px auto;
+            display: none;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+        .buzzer:active {
+            transform: scale(0.95);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+        .buzzer.disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+        }
+        .answer-section {
+            display: none;
+        }
+        input { 
+            padding: 10px;
+            margin: 10px;
+            width: 80%;
+            max-width: 300px;
+        }
+        button { 
+            padding: 10px 20px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:disabled {
+            background: #cccccc;
+        }
+        .waiting {
+            color: #666;
+            font-style: italic;
+            margin: 10px 0;
+            display: none;
+        }
+        .status-message {
+            font-size: 1.2em;
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            display: none;
+        }
+        .success {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+        .info {
+            background: #e3f2fd;
+            color: #1565c0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Quiz Participant</h1>
+    <div class="status" id="connectionStatus">Connecting...</div>
+    
+    <div class="team-section" id="teamSection">
+        <input type="text" id="teamName" placeholder="Enter your team name">
+        <button onclick="registerTeam()">Join Quiz</button>
+    </div>
+
+    <div class="status-message" id="statusMessage"></div>
+    
+    <button class="buzzer" id="buzzerBtn" onclick="buzz()">BUZZ!</button>
+    
+    <div class="waiting" id="waitingMsg">Waiting for your turn...</div>
+
+    <script>
+        const socket = io('http://localhost:3001');
+        const statusDiv = document.getElementById('connectionStatus');
+        const teamSection = document.getElementById('teamSection');
+        const buzzerBtn = document.getElementById('buzzerBtn');
+        const waitingMsg = document.getElementById('waitingMsg');
+        const statusMessage = document.getElementById('statusMessage');
+        
+        let teamName = '';
+        let canBuzz = false;
+
+        socket.on('connect', () => {
+            statusDiv.textContent = '✅ Connected';
+        });
+
+        socket.on('disconnect', () => {
+            statusDiv.textContent = '❌ Disconnected';
+            resetInterface();
+        });
+
+        socket.on('buzz', (data) => {
+            if (data.socketId === socket.id) {
+                // You buzzed!
+                statusMessage.textContent = `You buzzed in position #${data.rank || '?'}!`;
+                statusMessage.className = 'status-message success';
+                statusMessage.style.display = 'block';
+                buzzerBtn.classList.add('disabled');
+                waitingMsg.style.display = 'none';
+            } else {
+                // Someone else buzzed - but don't disable your buzzer!
+                statusMessage.textContent = `Team ${data.teamName} buzzed in position #${data.rank || '?'}!`;
+                statusMessage.className = 'status-message info';
+                statusMessage.style.display = 'block';
+            }
+        });
+
+        socket.on('reset-buzzer', () => {
+            resetInterface();
+        });
+
+        function registerTeam() {
+            const nameInput = document.getElementById('teamName');
+            const name = nameInput.value.trim();
+            if (name) {
+                teamName = name;
+                socket.emit('register-team', { teamName });
+                teamSection.style.display = 'none';
+                buzzerBtn.style.display = 'block';
+                canBuzz = true;
+                statusMessage.textContent = `Welcome, Team ${teamName}! Click the buzzer when you know the answer.`;
+                statusMessage.className = 'status-message success';
+                statusMessage.style.display = 'block';
+            }
+        }
+
+        function buzz() {
+            if (canBuzz && !buzzerBtn.classList.contains('disabled')) {
+                socket.emit('buzz', {
+                    teamName,
+                    timestamp: Date.now()
+                });
+            }
+        }
+
+        function resetInterface() {
+            if (teamName) {
+                canBuzz = true;
+                buzzerBtn.classList.remove('disabled');
+                waitingMsg.style.display = 'none';
+                statusMessage.style.display = 'none';
+            }
+        }
+
+        // Allow Enter key for team name
+        document.getElementById('teamName').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                registerTeam();
+            }
+        });
+    </script>
+</body>
+</html> 

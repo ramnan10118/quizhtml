@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Socket.IO Test</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+<body>
+    <h1>Socket.IO Connection Test</h1>
+    <input type="text" id="messageInput" placeholder="Type a message">
+    <button onclick="sendMessage()">Send Message</button>
+    <div id="messages"></div>
+
+    <script>
+        const socket = io('http://localhost:3001');
+        const messagesDiv = document.getElementById('messages');
+
+        socket.on('connect', () => {
+            addMessage('Connected to server! Socket ID: ' + socket.id);
+        });
+
+        socket.on('server-response', (data) => {
+            addMessage('Server says: ' + data);
+        });
+
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value;
+            socket.emit('test-event', message);
+            addMessage('You sent: ' + message);
+            input.value = '';
+        }
+
+        function addMessage(text) {
+            const p = document.createElement('p');
+            p.textContent = text;
+            messagesDiv.appendChild(p);
+        }
+    </script>
+</body>
+</html> 
