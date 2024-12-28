@@ -14,6 +14,8 @@ app.use(express.static('./'));
 let buzzerActive = true;
 let currentBuzzOrder = []; // Track the order of buzzes
 const teams = new Map(); // Store team names with socket IDs
+const teamScores = new Map(); // Store overall team scores
+const MAX_RESPONSES = 3; // Add this at the top with other constants
 
 io.on('connection', (socket) => {
     console.log('New connection:', socket.id);
@@ -28,22 +30,41 @@ io.on('connection', (socket) => {
         });
     });
 
-    socket.on('buzz', (data) => {
+    socket.on('buzz', (data, callback) => {
+        console.log('Server received buzz from:', {
+            teamName: teams.get(socket.id),
+            socketId: socket.id,
+            buzzerActive
+        });
+        
+        // Add acknowledgment
+        callback && callback({ received: true });
+        
         if (buzzerActive) {
             const teamName = teams.get(socket.id) || 'Unknown Team';
             
-            // Add to buzz order if not already in
             if (!currentBuzzOrder.includes(socket.id)) {
                 currentBuzzOrder.push(socket.id);
-                const rank = currentBuzzOrder.length; // Get position in buzz order
+                const rank = currentBuzzOrder.length;
                 
-                // Broadcast to all clients with rank information
+                console.log('Processing buzz:', {
+                    teamName,
+                    rank,
+                    currentBuzzOrder
+                });
+                
                 io.emit('buzz', {
                     socketId: socket.id,
                     teamName: teamName,
                     timestamp: data.timestamp,
-                    rank: rank // Make sure this is included in the emit
+                    rank: rank,
+                    totalResponses: currentBuzzOrder.length
                 });
+
+                // Only disable buzzer if we've reached max responses
+                if (currentBuzzOrder.length >= MAX_RESPONSES) {
+                    buzzerActive = false;
+                }
             }
         }
     });
@@ -65,6 +86,11 @@ io.on('connection', (socket) => {
             teams.delete(socket.id);
             io.emit('disconnect-team', socket.id);
         }
+    });
+
+    socket.on('test-ping', (data, callback) => {
+        console.log('Received test ping from:', data.team);
+        callback({ pong: true });
     });
 });
 

@@ -98,7 +98,9 @@
     <div class="waiting" id="waitingMsg">Waiting for your turn...</div>
 
     <script>
-        const socket = io('http://localhost:3001');
+        const socket = io('http://localhost:3001', { 
+            forceNew: true  // Force a new connection for each participant
+        });
         const statusDiv = document.getElementById('connectionStatus');
         const teamSection = document.getElementById('teamSection');
         const buzzerBtn = document.getElementById('buzzerBtn');
@@ -110,6 +112,9 @@
 
         socket.on('connect', () => {
             statusDiv.textContent = '✅ Connected';
+            socket.emit('test-ping', { team: teamName }, (response) => {
+                console.log('Test ping response:', response);
+            });
         });
 
         socket.on('disconnect', () => {
@@ -118,6 +123,9 @@
         });
 
         socket.on('buzz', (data) => {
+            console.log('Received buzz data:', data);
+            console.log('My socket ID:', socket.id);
+            
             if (data.socketId === socket.id) {
                 // You buzzed!
                 statusMessage.textContent = `You buzzed in position #${data.rank || '?'}!`;
@@ -127,12 +135,16 @@
                 canBuzz = false;
                 waitingMsg.style.display = 'none';
             } else {
-                // Someone else buzzed - now we should disable your buzzer too
+                // Someone else buzzed - but don't disable your buzzer unless max responses reached
                 statusMessage.textContent = `Team ${data.teamName} buzzed in position #${data.rank || '?'}!`;
                 statusMessage.className = 'status-message info';
                 statusMessage.style.display = 'block';
-                buzzerBtn.classList.add('disabled');
-                canBuzz = false;
+                
+                // Only disable if we've reached max responses (3)
+                if (data.totalResponses >= 3) {
+                    buzzerBtn.classList.add('disabled');
+                    canBuzz = false;
+                }
             }
         });
 
@@ -156,10 +168,20 @@
         }
 
         function buzz() {
+            console.log('Socket connected?', socket.connected);
+            console.log('Buzz attempt:', {
+                canBuzz,
+                isDisabled: buzzerBtn.classList.contains('disabled'),
+                teamName
+            });
+            
             if (canBuzz && !buzzerBtn.classList.contains('disabled')) {
+                console.log('Sending buzz event for team:', teamName);
                 socket.emit('buzz', {
                     teamName,
                     timestamp: Date.now()
+                }, (response) => {
+                    console.log('Server acknowledged buzz:', response);
                 });
             }
         }
