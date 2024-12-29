@@ -4,98 +4,69 @@
     <title>Quiz Host</title>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body { 
-            font-family: Arial, sans-serif; 
-            padding: 20px;
-            max-width: 800px;
-            margin: 0 auto;
-        }
-        .status { 
-            color: #666;
-            margin: 10px 0;
-        }
-        .controls {
-            margin: 20px 0;
-            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            min-height: 100vh;
             background: #f5f5f5;
-            border-radius: 8px;
         }
-        .team-name {
-            font-weight: bold;
-            color: #1565c0;
-            margin-bottom: 5px;
+
+        .container {
+            display: grid;
+            grid-template-rows: 10% 90%;
+            min-height: 100vh;
         }
-        .timestamp {
-            color: #666;
-            font-size: 0.8em;
+
+        /* Header Section - 10% */
+        .header {
+            background: #1a2a6c;
+            color: white;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 1.8em;
+        }
+
+        .status {
+            color: rgba(255, 255, 255, 0.8);
             margin-top: 5px;
         }
-        button {
-            padding: 10px 20px;
-            margin: 5px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
+
+        /* Main Content - 90% */
+        .main-content {
+            display: grid;
+            grid-template-columns: 70% 30%;
+            height: 100%;
         }
-        .reset-btn {
-            background: #4CAF50;
-            color: white;
-        }
-        .clear-btn {
-            background: #f44336;
-            color: white;
-        }
-        .first-answer {
-            border-left: 5px solid #4CAF50;
-        }
-        #buzzStatus {
-            font-size: 1.2em;
-            margin: 10px 0;
-            padding: 10px;
-            background: #e8f5e9;
-            border-radius: 5px;
-            display: none;
-        }
-        .teams-list {
-            margin: 20px 0;
-            padding: 15px;
-            background: #fff;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-        .team-item {
-            padding: 5px 0;
-            color: #666;
-        }
-        .buzz-rankings {
-            margin: 20px 0;
-            padding: 15px;
-            background: #fff;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-        .rank-item {
-            padding: 10px;
-            margin: 5px 0;
-            background: #f5f5f5;
-            border-radius: 5px;
-            display: flex;
-            align-items: center;
-        }
-        .rank-number {
-            font-size: 1.2em;
-            font-weight: bold;
-            margin-right: 15px;
-            color: #1565c0;
-        }
-        .rankings-section {
-            margin: 20px 0;
+
+        /* Questions Section - 70% of 90% */
+        .questions-section {
             padding: 20px;
             background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            border-right: 1px solid #eee;
+            display: flex;
+            flex-direction: column;
         }
+
+        /* Rankings Section - 30% of 90% */
+        .rankings-section {
+            padding: 20px;
+            background: white;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Rankings Styles */
         .rank-item {
             display: flex;
             align-items: center;
@@ -105,6 +76,7 @@
             border-radius: 8px;
             border-left: 4px solid #1565c0;
         }
+
         .rank-position {
             font-size: 24px;
             font-weight: bold;
@@ -112,46 +84,139 @@
             margin-right: 20px;
             min-width: 40px;
         }
+
         .rank-team {
-            font-size: 18px;
+            font-size: 16px;
             flex-grow: 1;
         }
+
         .rank-time {
             color: #666;
             font-size: 14px;
         }
+
         .no-rankings {
             color: #666;
             font-style: italic;
             padding: 20px;
             text-align: center;
         }
+
+        /* Reset Button */
+        .reset-btn {
+            padding: 12px 24px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: auto;
+            transition: background-color 0.2s;
+        }
+
+        .reset-btn:hover {
+            background: #45a049;
+        }
+
+        /* Section Headers */
+        .section-header {
+            font-size: 1.5em;
+            color: #1a2a6c;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #eee;
+        }
+
+        #buzzStatus {
+            margin: 10px 0;
+            padding: 10px;
+            background: #e8f5e9;
+            border-radius: 5px;
+            display: none;
+        }
+
+        .question-controls {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .current-question {
+            margin-bottom: 20px;
+        }
+
+        .current-question h3 {
+            color: #1a2a6c;
+            font-size: 1.3em;
+        }
+
+        .question-navigation {
+            display: flex;
+            gap: 10px;
+        }
+
+        .nav-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background: #1565c0;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .nav-btn:hover:not(:disabled) {
+            background: #1156a4;
+        }
+
+        .nav-btn:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
-    <h1>Quiz Host</h1>
-    <div class="status" id="connectionStatus">Connecting...</div>
-    
-    <div class="teams-list">
-        <h3>Connected Teams:</h3>
-        <div id="teamsList"></div>
-    </div>
+    <div class="container">
+        <!-- Header Section - 10% -->
+        <header class="header">
+            <h1>Quiz Host Control Panel</h1>
+            <div class="status" id="connectionStatus">Connecting...</div>
+        </header>
 
-    <div class="rankings-section">
-        <h2>Current Round Rankings</h2>
-        <div id="buzzRankings"></div>
-    </div>
+        <!-- Main Content - 90% -->
+        <div class="main-content">
+            <!-- Questions Section - 70% -->
+            <div class="questions-section">
+                <h2 class="section-header">Questions Panel</h2>
+                <div class="question-controls">
+                    <div class="current-question">
+                        <h3>Current Question: <span id="questionNumber">1</span></h3>
+                    </div>
+                    <div class="question-navigation">
+                        <button id="prevQuestion" class="nav-btn" onclick="changeQuestion('prev')" disabled>Previous</button>
+                        <button id="nextQuestion" class="nav-btn" onclick="changeQuestion('next')">Next</button>
+                    </div>
+                </div>
+                <div id="buzzStatus"></div>
+            </div>
 
-    <div class="controls">
-        <div id="buzzStatus"></div>
-        <button class="reset-btn" onclick="resetBuzzer()">Reset Buzzer</button>
+            <!-- Rankings Section - 30% -->
+            <div class="rankings-section">
+                <h2 class="section-header">Team Rankings</h2>
+                <div id="buzzRankings"></div>
+                <button class="reset-btn" onclick="resetBuzzer()">Reset Buzzer</button>
+            </div>
+        </div>
     </div>
 
     <script>
-        const socket = io('http://localhost:3001');
+        const socket = io('http://localhost:3001', {
+            forceNew: true
+        });
         const statusDiv = document.getElementById('connectionStatus');
         const buzzStatusDiv = document.getElementById('buzzStatus');
-        const teamsListDiv = document.getElementById('teamsList');
         const buzzRankingsDiv = document.getElementById('buzzRankings');
         let currentRankings = [];
         
@@ -167,7 +232,6 @@
 
         socket.on('register-team', (data) => {
             teams.set(data.socketId, data.teamName);
-            updateTeamsList();
         });
 
         socket.on('buzz', (data) => {
@@ -188,14 +252,7 @@
 
         socket.on('disconnect-team', (socketId) => {
             teams.delete(socketId);
-            updateTeamsList();
         });
-
-        function updateTeamsList() {
-            teamsListDiv.innerHTML = Array.from(teams.values())
-                .map(team => `<div class="team-item">• ${team}</div>`)
-                .join('');
-        }
 
         function updateRankings() {
             if (currentRankings.length === 0) {
@@ -209,15 +266,14 @@
 
             buzzRankingsDiv.innerHTML = currentRankings
                 .map((rank, index) => {
-                    // Convert timestamp to readable format with milliseconds
                     const date = new Date(rank.timestamp);
                     const time = date.toLocaleTimeString() + '.' + date.getMilliseconds();
                     
                     return `
                         <div class="rank-item">
                             <div class="rank-position">#${index + 1}</div>
-                            <div class="rank-team">Team ${rank.teamName}</div>
-                            <div class="rank-time">Buzzed at: ${time}</div>
+                            <div class="rank-team">${rank.teamName}</div>
+                            <div class="rank-time">${time}</div>
                         </div>
                     `;
                 }).join('');
@@ -228,6 +284,32 @@
             buzzStatusDiv.style.display = 'none';
             currentRankings = []; // Clear rankings
             updateRankings();
+        }
+
+        let currentQuestion = 1;
+        const totalQuestions = 2;
+
+        function changeQuestion(direction) {
+            console.log('Changing question:', direction);
+            if (direction === 'next' && currentQuestion < totalQuestions) {
+                currentQuestion++;
+            } else if (direction === 'prev' && currentQuestion > 1) {
+                currentQuestion--;
+            }
+
+            // Update UI
+            document.getElementById('questionNumber').textContent = currentQuestion;
+            document.getElementById('prevQuestion').disabled = currentQuestion === 1;
+            document.getElementById('nextQuestion').disabled = currentQuestion === totalQuestions;
+
+            // First emit question change
+            console.log('Emitting question change:', currentQuestion);
+            socket.emit('question-change', { 
+                questionNumber: currentQuestion 
+            });
+            
+            // Then reset buzzer
+            resetBuzzer();
         }
     </script>
 </body>

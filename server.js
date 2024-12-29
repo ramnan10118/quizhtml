@@ -8,93 +8,87 @@ const io = require('socket.io')(http, {
     }
 });
 
-// Serve static files
-app.use(express.static('./'));
+app.use(express.static('public'));
 
-let buzzerActive = true;
-let currentBuzzOrder = []; // Track the order of buzzes
-const teams = new Map(); // Store team names with socket IDs
-const teamScores = new Map(); // Store overall team scores
-const MAX_RESPONSES = 3; // Add this at the top with other constants
+// Game state
+let buzzOrder = [];
+let currentQuestion = 1;
+const MAX_RESPONSES = 3;
 
 io.on('connection', (socket) => {
-    console.log('New connection:', socket.id);
+    console.log('User connected:', socket.id);
+
+    // Send current question number to newly connected participants
+    socket.on('request-question-number', () => {
+        socket.emit('question-change', { questionNumber: currentQuestion });
+    });
 
     socket.on('register-team', (data) => {
-        teams.set(socket.id, data.teamName);
-        console.log(`Team "${data.teamName}" registered`);
-        // Broadcast to hosts
+        console.log('Team registered:', data.teamName);
+        // Store socket ID with team name for future reference
+        socket.teamName = data.teamName;
+        // Notify host of new team
         io.emit('register-team', {
             socketId: socket.id,
             teamName: data.teamName
         });
     });
 
-    socket.on('buzz', (data, callback) => {
-        console.log('Server received buzz from:', {
-            teamName: teams.get(socket.id),
-            socketId: socket.id,
-            buzzerActive
-        });
-        
-        // Add acknowledgment
-        callback && callback({ received: true });
-        
-        if (buzzerActive) {
-            const teamName = teams.get(socket.id) || 'Unknown Team';
+    socket.on('buzz', (data) => {
+        // Only allow buzz if not already in list
+        if (!buzzOrder.some(buzz => buzz.socketId === socket.id)) {
+            const buzzData = {
+                socketId: socket.id,
+                teamName: data.teamName,
+                timestamp: data.timestamp,
+                rank: buzzOrder.length + 1
+            };
             
-            if (!currentBuzzOrder.includes(socket.id)) {
-                currentBuzzOrder.push(socket.id);
-                const rank = currentBuzzOrder.length;
-                
-                console.log('Processing buzz:', {
-                    teamName,
-                    rank,
-                    currentBuzzOrder
-                });
-                
-                io.emit('buzz', {
-                    socketId: socket.id,
-                    teamName: teamName,
-                    timestamp: data.timestamp,
-                    rank: rank,
-                    totalResponses: currentBuzzOrder.length
-                });
-
-                // Only disable buzzer if we've reached max responses
-                if (currentBuzzOrder.length >= MAX_RESPONSES) {
-                    buzzerActive = false;
-                }
-            }
+            buzzOrder.push(buzzData);
+            
+            // Emit to all clients with total responses
+            io.emit('buzz', {
+                ...buzzData,
+                totalResponses: buzzOrder.length
+            });
         }
     });
 
+    socket.on('question-change', (data) => {
+        console.log('Server received question change:', data);
+        currentQuestion = data.questionNumber;
+        // Reset buzz order when question changes
+        buzzOrder = [];
+        // Notify all clients of question change
+        console.log('Server broadcasting question change to all clients');
+        io.emit('question-change', { 
+            questionNumber: currentQuestion,
+            timestamp: Date.now()
+        });
+        // Also emit reset-buzzer to ensure all clients reset their state
+        io.emit('reset-buzzer');
+    });
+
     socket.on('reset-buzzer', () => {
-        buzzerActive = true;
-        currentBuzzOrder = []; // Clear the buzz order
+        buzzOrder = [];
         io.emit('reset-buzzer');
     });
 
     socket.on('disconnect', () => {
-        console.log('Disconnected:', socket.id);
-        // Remove from buzz order if present
-        currentBuzzOrder = currentBuzzOrder.filter(id => id !== socket.id);
-        
-        if (teams.has(socket.id)) {
-            const teamName = teams.get(socket.id);
-            console.log(`Team "${teamName}" disconnected`);
-            teams.delete(socket.id);
-            io.emit('disconnect-team', socket.id);
-        }
+        console.log('User disconnected:', socket.id);
+        // Notify host if a team disconnects
+        io.emit('disconnect-team', socket.id);
     });
 
+    // Test ping handler
     socket.on('test-ping', (data, callback) => {
-        console.log('Received test ping from:', data.team);
-        callback({ pong: true });
+        if (callback) {
+            callback({ status: 'ok', message: 'Pong!' });
+        }
     });
 });
 
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 http.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 }); 
