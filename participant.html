@@ -289,8 +289,9 @@
     <button id="quitBtn" onclick="quitSession()" style="display: none; position: fixed; top: 10px; right: 10px; background: linear-gradient(145deg, #ff5555, #ff3333); box-shadow: 0 4px 0 #cc0000;">Quit Session</button>
 
     <script>
-        const socket = io('http://localhost:3001', { 
-            forceNew: true
+        const socket = io('https://quizhtml.onrender.com', { 
+            forceNew: true,
+            transports: ['websocket']
         });
         const statusDiv = document.getElementById('connectionStatus');
         const teamSection = document.getElementById('teamSection');

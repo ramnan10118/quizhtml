@@ -4,11 +4,28 @@ const http = require('http').createServer(app);
 const io = require('socket.io')(http, {
     cors: {
         origin: "*",
-        methods: ["GET", "POST"]
+        methods: ["GET", "POST"],
+        credentials: true
     }
 });
 
-app.use(express.static('public'));
+// Serve static files
+app.use(express.static(__dirname));
+
+// Host route
+app.get('/', (req, res) => {
+    res.sendFile(__dirname + '/host.html');
+});
+
+// Participant route
+app.get('/join', (req, res) => {
+    res.sendFile(__dirname + '/participant.html');
+});
+
+// Redirect any other routes to participant page
+app.get('*', (req, res) => {
+    res.redirect('/join');
+});
 
 // Game state
 let buzzOrder = [];
