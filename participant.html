@@ -23,6 +23,7 @@
             align-items: center;
             justify-content: flex-start;
             overflow-x: hidden;
+            padding-bottom: 130px;
         }
 
         h1 {
@@ -34,10 +35,15 @@
         }
 
         .status { 
-            color: white;
-            margin: 10px 0;
-            font-weight: 500;
-            font-size: 1rem;
+            color: rgba(255, 255, 255, 0.6);
+            margin: 0;
+            font-weight: 400;
+            font-size: 0.8rem;
+            position: fixed;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 99;
         }
 
         .team-section {
@@ -50,28 +56,30 @@
         }
 
         .buzzer {
-            width: min(200px, 60vw);
-            height: min(200px, 60vw);
-            border-radius: 50%;
+            width: min(90%, 400px);
+            height: 80px;
+            border-radius: 15px;
             background: linear-gradient(145deg, #ff5555, #ff3333);
             border: none;
             color: white;
             font-size: min(24px, 6vw);
             font-weight: bold;
             cursor: pointer;
-            margin: 20px auto;
             display: none;
             box-shadow: 
-                0 6px 0 #cc0000,
-                0 8px 10px rgba(0,0,0,0.3);
+                0 12px 0 #cc0000,
+                0 14px 20px rgba(0,0,0,0.4);
             text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
             transition: all 0.1s ease;
-            position: relative;
-            top: 0;
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
             -webkit-touch-callout: none;
             -webkit-user-select: none;
             user-select: none;
             touch-action: manipulation;
+            z-index: 100;
         }
 
         @keyframes shake {
@@ -80,12 +88,8 @@
             75% { transform: translateX(8px); }
         }
 
-        .shake {
-            animation: shake 0.2s ease-in-out;
-        }
-
         .buzzer:active {
-            top: 6px;
+            bottom: 30px;
             box-shadow: 
                 0 0 0 #cc0000,
                 0 0 0 rgba(0,0,0,0.3);
@@ -198,7 +202,7 @@
 
         .question-display {
             background: rgba(255, 255, 255, 0.1);
-            padding: 15px;
+            padding: 20px;
             border-radius: 15px;
             margin: 20px auto;
             backdrop-filter: blur(10px);
@@ -208,19 +212,61 @@
 
         .question-display h2 {
             color: white;
-            font-size: min(2em, 8vw);
-            margin: 0;
+            font-size: min(1.8em, 7vw);
+            margin: 0 0 15px 0;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .question-text {
+            color: white;
+            font-size: min(1.2em, 5vw);
+            margin: 15px 0;
+            line-height: 1.4;
+        }
+
+        .options-list {
+            display: grid;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .option-item {
+            padding: 12px 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            color: white;
+            text-align: left;
+            font-size: min(1em, 4.5vw);
+            transition: all 0.2s;
+        }
+
+        @keyframes celebrationBg {
+            0% { background: linear-gradient(135deg, #1a2a6c, #2d5a8b, #2C3E50); }
+            5% { background: linear-gradient(135deg, #ff4e50, #ff9966, #ff4e50); }
+            95% { background: linear-gradient(135deg, #ff4e50, #ff9966, #ff4e50); }
+            100% { background: linear-gradient(135deg, #1a2a6c, #2d5a8b, #2C3E50); }
+        }
+
+        @keyframes celebrationPulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
+        }
+
+        .celebrating {
+            animation: celebrationBg 2s ease-in-out, celebrationPulse 0.5s ease-in-out 4;
         }
     </style>
 </head>
 <body>
     <h1>Quiz Participant</h1>
-    <div class="status" id="connectionStatus">Connecting...</div>
     
     <!-- Add Question Display -->
-    <div class="question-display">
+    <div class="question-display" id="questionDisplay" style="display: none;">
         <h2>Question <span id="currentQuestion">1</span></h2>
+        <p id="questionText" class="question-text"></p>
+        <div id="optionsList" class="options-list"></div>
     </div>
 
     <div class="team-section" id="teamSection">
@@ -233,6 +279,8 @@
     <button class="buzzer" id="buzzerBtn" onclick="buzz()">BUZZ!</button>
     
     <div class="waiting" id="waitingMsg">Waiting for your turn...</div>
+    
+    <div class="status" id="connectionStatus">Connecting...</div>
 
     <script>
         const socket = io('http://localhost:3001', { 
@@ -302,20 +350,19 @@
             console.log('My socket ID:', socket.id);
             
             if (data.socketId === socket.id) {
-                // You buzzed!
-                statusMessage.textContent = `You buzzed in position #${data.rank || '?'}!`;
-                statusMessage.className = 'status-message success';
-                statusMessage.style.display = 'block';
+                // You buzzed - just disable the button
                 buzzerBtn.classList.add('disabled');
                 canBuzz = false;
                 waitingMsg.style.display = 'none';
                 hapticFeedback.success();
-            } else {
-                // Someone else buzzed
-                statusMessage.textContent = `Team ${data.teamName} buzzed in position #${data.rank || '?'}!`;
-                statusMessage.className = 'status-message info';
-                statusMessage.style.display = 'block';
                 
+                // Add celebration effect
+                document.body.classList.add('celebrating');
+                setTimeout(() => {
+                    document.body.classList.remove('celebrating');
+                }, 2000);
+            } else {
+                // Someone else buzzed - only disable if max responses reached
                 if (data.totalResponses >= 3) {
                     buzzerBtn.classList.add('disabled');
                     canBuzz = false;
@@ -335,6 +382,19 @@
             currentQuestion = data.questionNumber;
             document.getElementById('currentQuestion').textContent = currentQuestion;
             
+            // Update question content
+            if (data.questionData) {
+                document.getElementById('questionText').textContent = data.questionData.text;
+                
+                // Update options
+                const optionsList = document.getElementById('optionsList');
+                optionsList.innerHTML = data.questionData.options.map((option, index) => `
+                    <div class="option-item">
+                        ${String.fromCharCode(65 + index)}. ${option}
+                    </div>
+                `).join('');
+            }
+            
             // Reset buzzer state
             canBuzz = true;
             buzzerBtn.classList.remove('disabled');
@@ -348,7 +408,6 @@
             // Haptic feedback for question change
             hapticFeedback.connectionChange();
 
-            console.log('Updating status message for question:', currentQuestion);
             // Update status message
             statusMessage.textContent = `Question ${currentQuestion} started. Get ready!`;
             statusMessage.className = 'status-message info';
@@ -356,12 +415,8 @@
             
             // Auto-hide status message after 3 seconds
             setTimeout(() => {
-                console.log('Hiding status message');
                 statusMessage.style.display = 'none';
             }, 3000);
-
-            // Clear any previous rankings
-            currentRankings = [];
         });
 
         function registerTeam() {
@@ -370,8 +425,14 @@
             if (name) {
                 teamName = name;
                 socket.emit('register-team', { teamName });
+                
+                // Hide team section
                 teamSection.style.display = 'none';
+                
+                // Show question display and buzzer
+                document.getElementById('questionDisplay').style.display = 'block';
                 buzzerBtn.style.display = 'block';
+                
                 canBuzz = true;
                 statusMessage.textContent = `Welcome, Team ${teamName}! Click the buzzer when you know the answer.`;
                 statusMessage.className = 'status-message success';
@@ -434,6 +495,14 @@
                 hapticFeedback.buttonPress();
                 registerTeam();
             }
+        });
+
+        socket.on('celebrate', () => {
+            console.log('Received celebration event!');
+            document.body.classList.add('celebrating');
+            setTimeout(() => {
+                document.body.classList.remove('celebrating');
+            }, 2000);
         });
     </script>
 </body>
