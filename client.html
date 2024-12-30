@@ -11,7 +11,7 @@
     <div id="messages"></div>
 
     <script>
-        const socket = io('http://localhost:3001');
+        const socket = io('https://quizhtml.onrender.com');
         const messagesDiv = document.getElementById('messages');
 
         socket.on('connect', () => {
