@@ -40,10 +40,13 @@
             font-weight: 400;
             font-size: 0.8rem;
             position: fixed;
-            bottom: 10px;
+            bottom: 120px;
             left: 50%;
             transform: translateX(-50%);
             z-index: 99;
+            width: 100%;
+            text-align: center;
+            padding: 10px;
         }
 
         .team-section {
@@ -80,6 +83,7 @@
             user-select: none;
             touch-action: manipulation;
             z-index: 100;
+            margin-bottom: 10px;
         }
 
         @keyframes shake {
@@ -282,6 +286,8 @@
     
     <div class="status" id="connectionStatus">Connecting...</div>
 
+    <button id="quitBtn" onclick="quitSession()" style="display: none; position: fixed; top: 10px; right: 10px; background: linear-gradient(145deg, #ff5555, #ff3333); box-shadow: 0 4px 0 #cc0000;">Quit Session</button>
+
     <script>
         const socket = io('http://localhost:3001', { 
             forceNew: true
@@ -291,8 +297,9 @@
         const buzzerBtn = document.getElementById('buzzerBtn');
         const waitingMsg = document.getElementById('waitingMsg');
         const statusMessage = document.getElementById('statusMessage');
+        const quitBtn = document.getElementById('quitBtn');
         
-        let teamName = '';
+        let teamName = localStorage.getItem('teamName') || '';
         let canBuzz = false;
         let currentQuestion = 1;
 
@@ -329,6 +336,25 @@
                 }
             }
         };
+
+        // Check for existing session on load
+        window.addEventListener('load', () => {
+            if (teamName) {
+                // Restore previous session
+                teamSection.style.display = 'none';
+                document.getElementById('questionDisplay').style.display = 'block';
+                buzzerBtn.style.display = 'block';
+                quitBtn.style.display = 'block';
+                canBuzz = true;
+                
+                // Re-register with server
+                socket.emit('register-team', { teamName });
+                
+                statusMessage.textContent = `Welcome back, Team ${teamName}!`;
+                statusMessage.className = 'status-message success';
+                statusMessage.style.display = 'block';
+            }
+        });
 
         socket.on('connect', () => {
             statusDiv.textContent = '✅ Connected';
@@ -419,19 +445,30 @@
             }, 3000);
         });
 
+        function quitSession() {
+            if (confirm('Are you sure you want to quit? This will end your session.')) {
+                localStorage.removeItem('teamName');
+                location.reload();
+            }
+        }
+
         function registerTeam() {
             const nameInput = document.getElementById('teamName');
             const name = nameInput.value.trim();
             if (name) {
                 teamName = name;
+                // Save to localStorage
+                localStorage.setItem('teamName', teamName);
+                
                 socket.emit('register-team', { teamName });
                 
                 // Hide team section
                 teamSection.style.display = 'none';
                 
-                // Show question display and buzzer
+                // Show question display, buzzer and quit button
                 document.getElementById('questionDisplay').style.display = 'block';
                 buzzerBtn.style.display = 'block';
+                quitBtn.style.display = 'block';
                 
                 canBuzz = true;
                 statusMessage.textContent = `Welcome, Team ${teamName}! Click the buzzer when you know the answer.`;
