@@ -4,6 +4,7 @@
     <title>Quiz Participant</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
         * {
             box-sizing: border-box;
@@ -260,6 +261,28 @@
 
         .celebrating {
             animation: celebrationBg 2s ease-in-out, celebrationPulse 0.5s ease-in-out 4;
+        }
+
+        .point-gained {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.9);
+            padding: 20px 40px;
+            border-radius: 15px;
+            font-size: 24px;
+            font-weight: bold;
+            color: #4CAF50;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            z-index: 1000;
+            animation: popIn 0.5s ease-out;
+        }
+
+        @keyframes popIn {
+            0% { transform: translate(-50%, -50%) scale(0); }
+            50% { transform: translate(-50%, -50%) scale(1.2); }
+            100% { transform: translate(-50%, -50%) scale(1); }
         }
     </style>
 </head>
@@ -545,9 +568,26 @@
         });
 
         socket.on('celebrate', () => {
-            console.log('Received celebration event!');
+            // Create point gained message
+            const pointMsg = document.createElement('div');
+            pointMsg.className = 'point-gained';
+            pointMsg.textContent = '+1 Point!';
+            document.body.appendChild(pointMsg);
+
+            // Trigger confetti
+            confetti({
+                particleCount: 100,
+                spread: 70,
+                origin: { y: 0.6 },
+                colors: ['#4CAF50', '#1565c0', '#ff4e50', '#ff9966']
+            });
+
+            // Add celebration background
             document.body.classList.add('celebrating');
+
+            // Remove message and celebration after animation
             setTimeout(() => {
+                document.body.removeChild(pointMsg);
                 document.body.classList.remove('celebrating');
             }, 2000);
         });
