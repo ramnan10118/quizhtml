@@ -295,8 +295,13 @@
     </div>
 
     <script>
-        const socket = io('http://localhost:3001', {
-            forceNew: true
+        const socket = io({
+            reconnection: true,
+            reconnectionAttempts: Infinity,
+            reconnectionDelay: 1000,
+            reconnectionDelayMax: 5000,
+            timeout: 20000,
+            autoConnect: true
         });
         const statusDiv = document.getElementById('connectionStatus');
         const buzzStatusDiv = document.getElementById('buzzStatus');

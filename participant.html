@@ -289,9 +289,18 @@
     <button id="quitBtn" onclick="quitSession()" style="display: none; position: fixed; top: 10px; right: 10px; background: linear-gradient(145deg, #ff5555, #ff3333); box-shadow: 0 4px 0 #cc0000;">Quit Session</button>
 
     <script>
-        const socket = io('https://quizhtml.onrender.com', { 
-            forceNew: true,
-            transports: ['websocket']
+        // Get the server URL from the current page URL
+        const serverUrl = window.location.hostname === 'localhost' 
+            ? 'http://localhost:3001'
+            : 'https://socketcheck.onrender.com';  // Replace with your actual Render URL
+            
+        const socket = io({
+            reconnection: true,
+            reconnectionAttempts: Infinity,
+            reconnectionDelay: 1000,
+            reconnectionDelayMax: 5000,
+            timeout: 20000,
+            autoConnect: true
         });
         const statusDiv = document.getElementById('connectionStatus');
         const teamSection = document.getElementById('teamSection');

@@ -6,7 +6,8 @@ const io = require('socket.io')(http, {
         origin: "*",
         methods: ["GET", "POST"],
         credentials: true
-    }
+    },
+    path: '/socket.io'
 });
 
 // Serve static files
