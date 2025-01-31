@@ -28,142 +28,185 @@ app.get('*', (req, res) => {
     res.redirect('/join');
 });
 
-// Game state
-let buzzOrder = [];
-let currentQuestion = 1;
-const MAX_RESPONSES = 3;
-let teamScores = new Map(); // Track team scores
-const teamSockets = new Map(); // Track team name -> socket ID
-
-// Quiz Questions
+// Quiz questions
 const questions = [
     {
-        id: 1,
-        text: "What is the capital of France?",
-        options: ["London", "Berlin", "Paris", "Madrid"],
-        correctAnswer: "Paris"
+        text: "Who has more Instagram followers?",
+        options: [
+            "Kylie Jenner",
+            "Lionel Messi", 
+            "Cristiano Ronaldo",
+            "Kim Kardashian"
+        ],
+        correct: 2  // C) Cristiano Ronaldo
     },
     {
-        id: 2,
-        text: "Which planet is known as the Red Planet?",
-        options: ["Venus", "Mars", "Jupiter", "Saturn"],
-        correctAnswer: "Mars"
+        text: "Which movie made more money in 2023?",
+        options: [
+            "Barbie",
+            "Oppenheimer",
+            "Mario Movie",
+            "Avatar 2"
+        ],
+        correct: 0  // A) Barbie
     },
     {
-        id: 3,
-        text: "Who painted the Mona Lisa?",
-        options: ["Van Gogh", "Da Vinci", "Picasso", "Rembrandt"],
-        correctAnswer: "Da Vinci"
+        text: "What's Taylor Swift's cat's name?",
+        options: [
+            "Meredith",
+            "Oliver",
+            "Luna",
+            "Bella"
+        ],
+        correct: 0  // A) Meredith
     },
     {
-        id: 4,
-        text: "What is the largest mammal in the world?",
-        options: ["African Elephant", "Blue Whale", "Giraffe", "Polar Bear"],
-        correctAnswer: "Blue Whale"
+        text: "Which Netflix show features Wednesday Addams?",
+        options: [
+            "Stranger Things",
+            "Wednesday",
+            "Shadow and Bone",
+            "Outer Banks"
+        ],
+        correct: 1  // B) Wednesday
     },
     {
-        id: 5,
-        text: "Which element has the chemical symbol 'Au'?",
-        options: ["Silver", "Copper", "Gold", "Aluminum"],
-        correctAnswer: "Gold"
+        text: "Most played song on Spotify ever is:",
+        options: [
+            "Shape of You",
+            "Blinding Lights",
+            "Dance Monkey",
+            "Someone Like You"
+        ],
+        correct: 0  // A) Shape of You
+    },
+    {
+        text: "What's the most used emoji worldwide?",
+        options: [
+            "😂",
+            "❤️",
+            "👍",
+            "😭"
+        ],
+        correct: 0  // A) 😂
+    },
+    {
+        text: "Which platform has more users?",
+        options: [
+            "Instagram",
+            "TikTok",
+            "Twitter",
+            "Snapchat"
+        ],
+        correct: 0  // A) Instagram
+    },
+    {
+        text: "Who won Best Actor Oscar 2023?",
+        options: [
+            "Austin Butler",
+            "Brendan Fraser",
+            "Colin Farrell",
+            "Tom Cruise"
+        ],
+        correct: 1  // B) Brendan Fraser
+    },
+    {
+        text: "What's BTS's fandom called?",
+        options: [
+            "ARMY",
+            "BLINK",
+            "ONCE",
+            "STAY"
+        ],
+        correct: 0  // A) ARMY
+    },
+    {
+        text: "Most subscribed YouTube channel is:",
+        options: [
+            "PewDiePie",
+            "MrBeast",
+            "T-Series",
+            "Cocomelon"
+        ],
+        correct: 1  // B) MrBeast
+    },
+    {
+        text: "How many subscribers does ACKO insurance YouTube channel have?",
+        options: [
+            "125K",
+            "250K",
+            "500K",
+            "750K"
+        ],
+        correct: 1  // B) 250K (example value)
+    },
+    {
+        text: "How many vehicles do we insure today at ACKO?",
+        options: [
+            "2 Million",
+            "3.5 Million",
+            "5 Million",
+            "7 Million"
+        ],
+        correct: 2  // C) 5 Million (example value)
+    },
+    {
+        text: "How many health policies have we sold till date at ACKO?",
+        options: [
+            "100K",
+            "250K",
+            "500K",
+            "1 Million"
+        ],
+        correct: 3  // D) 1 Million (example value)
     }
 ];
 
-io.on('connection', (socket) => {
-    console.log('User connected:', socket.id);
+let currentQuestion = 1;
+let buzzOrder = [];
+const teams = new Map();
+const scores = new Map();
 
-    // Send current question number to newly connected participants
-    socket.on('request-question-number', () => {
-        console.log('Client requested question number:', socket.id);
-        socket.emit('question-change', { 
+io.on('connection', (socket) => {
+    console.log('Client connected:', socket.id);
+
+    // Send current question to newly connected clients
+    socket.emit('question-change', {
+        questionNumber: currentQuestion,
+        questionData: questions[currentQuestion - 1]
+    });
+
+    socket.on('register-team', (data) => {
+        console.log('Team registered:', data.teamName);
+        teams.set(socket.id, data.teamName);
+        scores.set(data.teamName, 0);
+        io.emit('register-team', { socketId: socket.id, teamName: data.teamName });
+    });
+
+    socket.on('question-change', (data) => {
+        currentQuestion = data.questionNumber;
+        buzzOrder = []; // Reset buzz order for new question
+        
+        // Broadcast question change with question data
+        io.emit('question-change', {
             questionNumber: currentQuestion,
             questionData: questions[currentQuestion - 1]
         });
     });
 
-    socket.on('register-team', (data) => {
-        console.log('Team registered:', data.teamName);
-        // Store socket ID with team name for future reference
-        socket.teamName = data.teamName;
-        teamSockets.set(data.teamName, socket.id);  // Store socket mapping
-        
-        // Initialize team score
-        teamScores.set(data.teamName, 0);
-        console.log('Team scores after registration:', Array.from(teamScores.entries()));
-        // Notify host of new team
-        io.emit('register-team', {
-            socketId: socket.id,
-            teamName: data.teamName,
-            score: 0
-        });
-    });
-
-    // Add new event for adding points
-    socket.on('add-point', (data) => {
-        console.log('\n=== Add Point Event ===');
-        console.log('Request received for team:', data.teamName);
-        console.log('Current teamScores Map:', Array.from(teamScores.entries()));
-        console.log('Has team in scores:', teamScores.has(data.teamName));
-        
-        if (teamScores.has(data.teamName)) {
-            const currentScore = teamScores.get(data.teamName);
-            const newScore = currentScore + 1;
-            teamScores.set(data.teamName, newScore);
-            
-            console.log(`Score updated: ${data.teamName} (${currentScore} → ${newScore})`);
-            
-            // Broadcast updated score to all clients
-            io.emit('score-update', {
-                teamName: data.teamName,
-                score: newScore
-            });
-        } else {
-            console.log('ERROR: Team not found in scores map');
-            // Initialize score if missing
-            teamScores.set(data.teamName, 1);
-            io.emit('score-update', {
-                teamName: data.teamName,
-                score: 1
-            });
-        }
-        console.log('=== End Add Point ===\n');
-    });
-
-    // Modify buzz event to include current score
     socket.on('buzz', (data) => {
-        // Only allow buzz if not already in list
-        if (!buzzOrder.some(buzz => buzz.socketId === socket.id)) {
-            const buzzData = {
-                socketId: socket.id,
-                teamName: data.teamName,
-                timestamp: data.timestamp,
-                rank: buzzOrder.length + 1,
-                score: teamScores.get(data.teamName) || 0
-            };
-            
-            buzzOrder.push(buzzData);
-            
-            // Emit to all clients with total responses
+        const teamName = data.teamName;
+        if (!buzzOrder.includes(teamName)) {
+            buzzOrder.push(teamName);
+            const rank = buzzOrder.length;
             io.emit('buzz', {
-                ...buzzData,
+                teamName: teamName,
+                timestamp: data.timestamp,
+                rank: rank,
+                socketId: socket.id,
                 totalResponses: buzzOrder.length
             });
         }
-    });
-
-    socket.on('question-change', (data) => {
-        console.log('Question change received from host');
-        currentQuestion = data.questionNumber;
-        buzzOrder = [];
-        
-        // Broadcast to ALL clients with question data
-        io.emit('question-change', { 
-            questionNumber: currentQuestion,
-            questionData: questions[currentQuestion - 1],
-            timestamp: Date.now()
-        });
-        
-        io.emit('reset-buzzer');
     });
 
     socket.on('reset-buzzer', () => {
@@ -171,32 +214,26 @@ io.on('connection', (socket) => {
         io.emit('reset-buzzer');
     });
 
-    socket.on('disconnect', () => {
-        console.log('User disconnected:', socket.id);
-        // Notify host if a team disconnects
-        io.emit('disconnect-team', socket.id);
-    });
-
-    // Test ping handler
-    socket.on('test-ping', (data, callback) => {
-        if (callback) {
-            callback({ status: 'ok', message: 'Pong!' });
-        }
-    });
-
     socket.on('trigger-celebration', (data) => {
-        console.log('\n=== Celebration Trigger ===');
-        console.log('Celebration requested for team:', data.teamName);
-        const socketId = teamSockets.get(data.teamName);
-        console.log('Found socket ID:', socketId);
-        
-        if (socketId) {
-            console.log('Sending celebration to socket:', socketId);
-            io.to(socketId).emit('celebrate');
-        } else {
-            console.log('No socket found for team:', data.teamName);
+        io.emit('celebrate', { teamName: data.teamName });
+    });
+
+    socket.on('disconnect', () => {
+        const teamName = teams.get(socket.id);
+        if (teamName) {
+            teams.delete(socket.id);
+            scores.delete(teamName);
+            io.emit('disconnect-team', socket.id);
         }
-        console.log('=== End Celebration Trigger ===\n');
+        console.log('Client disconnected:', socket.id);
+    });
+
+    // Handle request for current question number
+    socket.on('request-question-number', () => {
+        socket.emit('question-change', {
+            questionNumber: currentQuestion,
+            questionData: questions[currentQuestion - 1]
+        });
     });
 });
 
