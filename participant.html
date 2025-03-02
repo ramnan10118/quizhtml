@@ -17,10 +17,7 @@
             text-align: center;
             margin: 0;
             min-height: 100vh;
-            background: linear-gradient(135deg, 
-                rgba(30, 27, 75, 1), 
-                rgba(49, 46, 129, 1)
-            );
+            background: #1E1B4B;  /* Static dark blue background */
             position: relative;
             color: white;
             display: flex;
@@ -29,35 +26,6 @@
             justify-content: flex-start;
             overflow-x: hidden;
             padding-bottom: 130px;
-        }
-
-        body::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(135deg, 
-                rgba(46, 37, 120, 1), 
-                rgba(67, 56, 202, 1)
-            );
-            opacity: 0;
-            transition: opacity 3s ease-in-out;
-            z-index: -1;
-        }
-
-        @keyframes gradientShift {
-            0%, 100% {
-                opacity: 0;
-            }
-            50% {
-                opacity: 1;
-            }
-        }
-
-        body::before {
-            animation: gradientShift 8s ease-in-out infinite;
         }
 
         h1 {
